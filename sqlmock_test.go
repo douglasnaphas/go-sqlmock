@@ -2,6 +2,7 @@ package sqlmock
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -47,6 +48,21 @@ func Example() {
 		fmt.Printf("unmet expectation error: %s", err)
 	}
 	// Output:
+}
+
+type badOpener struct {
+}
+
+func (badOpener) open(driverName, dataSourceName string) (*sql.DB, error) {
+	return nil, errors.New("Failed to open database")
+}
+
+func TestBadOpen(t *testing.T) {
+	smock := sqlmock{opener: badOpener{}}
+	_, _, err := smock.open()
+	if err == nil {
+		t.Errorf("open() should fail when sqlmock.opener.open() returns error")
+	}
 }
 
 func TestIssue14EscapeSQL(t *testing.T) {

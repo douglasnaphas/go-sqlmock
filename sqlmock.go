@@ -71,17 +71,32 @@ type Sqlmock interface {
 	MatchExpectationsInOrder(bool)
 }
 
+type opener interface {
+	open(string, string) (*sql.DB, error)
+}
+
+type defaultOpener struct {
+}
+
+func (defaultOpener) open(driverName, dataSourceName string) (*sql.DB, error) {
+	return sql.Open(driverName, dataSourceName)
+}
+
 type sqlmock struct {
 	ordered bool
 	dsn     string
 	opened  int
 	drv     *mockDriver
+	opener  opener
 
 	expected []expectation
 }
 
 func (s *sqlmock) open() (*sql.DB, Sqlmock, error) {
-	db, err := sql.Open("sqlmock", s.dsn)
+	if s.opener == nil {
+		s.opener = defaultOpener{}
+	}
+	db, err := s.opener.open("sqlmock", s.dsn)
 	if err != nil {
 		return db, s, err
 	}
